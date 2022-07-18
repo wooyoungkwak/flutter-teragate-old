@@ -22,6 +22,7 @@ import '../service/attendService.dart';
 import '../utils/permission.dart';
 import 'login.dart';
 import 'webview2.dart';
+import 'back.dart';
 
 //현재시간
 import 'package:date_format/date_format.dart';
@@ -35,8 +36,7 @@ class Beacon extends StatefulWidget {
 }
 
 class _BeaconState extends State<Beacon> with WidgetsBindingObserver {
-  String formattedDate = "";
-  DateTime now = DateTime.now();
+  // DateTime now = DateTime.now();
   FlutterLocalNotificationsPlugin flutterLocalNotificationsPlugin =
       new FlutterLocalNotificationsPlugin();
 
@@ -50,8 +50,9 @@ class _BeaconState extends State<Beacon> with WidgetsBindingObserver {
   String? userId = "1";
   String? name = "test";
   var flutterSecureStorage = new FlutterSecureStorage();
-  String? data1 = "test1";
-  String? data2 = "test2";
+  String? data1 = "test1"; //id
+  String? data2 = "test2"; //pw
+  var attend_succes = false;
 
   late DateTime alert;
 
@@ -115,6 +116,8 @@ class _BeaconState extends State<Beacon> with WidgetsBindingObserver {
       //await BeaconsPlugin.clearDisclosureDialogShowFlag(false);
     }
 
+    BeaconsPlugin.listenToBeacons(beaconEventsController);
+
     if (Platform.isAndroid) {
       BeaconsPlugin.channel.setMethodCallHandler((call) async {
         print("Method: ${call.method}");
@@ -137,8 +140,6 @@ class _BeaconState extends State<Beacon> with WidgetsBindingObserver {
       });
     }
 
-    BeaconsPlugin.listenToBeacons(beaconEventsController);
-
     /* BeaconsPlugin.addRegion("myBeacon", "01022022-f88f-0000-00ae-9605fd9bb620");
     BeaconsPlugin.addRegion("iBeacon", "12345678-1234-5678-8f0c-720eaf059935");
  */
@@ -146,24 +147,24 @@ class _BeaconState extends State<Beacon> with WidgetsBindingObserver {
     await BeaconsPlugin.addRegion(
         "Teraenergy", "12345678-1234-5678-8f0c-720eaf059935");
 
-    BeaconsPlugin.addBeaconLayoutForAndroid(
+     BeaconsPlugin.addBeaconLayoutForAndroid(
         "m:2-3=beac,i:4-19,i:20-21,i:22-23,p:24-24,d:25-25");
-    BeaconsPlugin.addBeaconLayoutForAndroid(
-        "m:2-3=0215,i:4-19,i:20-21,i:22-23,p:24-24");
+      BeaconsPlugin.addBeaconLayoutForAndroid(
+          "m:2-3=0215,i:4-19,i:20-21,i:22-23,p:24-24");
+     
 
-    BeaconsPlugin.setForegroundScanPeriodForAndroid(
-        foregroundScanPeriod: 2200, foregroundBetweenScanPeriod: 10);
+    BeaconsPlugin.setForegroundScanPeriodForAndroid(foregroundScanPeriod: 2200, foregroundBetweenScanPeriod: 10);
 
-    BeaconsPlugin.setBackgroundScanPeriodForAndroid(
-        backgroundScanPeriod: 2200, backgroundBetweenScanPeriod: 10);
+    BeaconsPlugin.setBackgroundScanPeriodForAndroid(backgroundScanPeriod: 2200, backgroundBetweenScanPeriod: 10);
 
     beaconEventsController.stream.listen(
         (data) async {
           if (data.isNotEmpty && isRunning) {
-            if (_nrMessagesReceived <= 2) {
+            //if (_nrMessagesReceived <= 2) {
               setState(() {
                 _beaconResult = data;
                 _results.add("출근 처리 중입니다");
+                _showNotification("출근 처리 중입니다.");
                 _nrMessagesReceived++;
               });
 
@@ -172,8 +173,9 @@ class _BeaconState extends State<Beacon> with WidgetsBindingObserver {
               }
 
               print("Beacons DataReceived: " + data);
-            }
-            if (_nrMessagesReceived == 2) {
+            //}
+            if (!attend_succes) {
+              _nrMessagesReceived = 0;
               BeaconsPlugin.stopMonitoring(); //모니터링 종료
               setState(() {
                 //스캔 종료
@@ -224,6 +226,9 @@ class _BeaconState extends State<Beacon> with WidgetsBindingObserver {
                     FlutterDialog("출근하셨습니다 ${name}님!"); //다이얼로그창
                     setState(() {
                       _results.add("msg: ${name}님 출근");
+                      alert = DateTime.now().add(Duration(seconds: 10));
+                      _showNotification("출근하셨습니다");
+                      attend_succes = true;
                     });
                   });
                 }
@@ -265,6 +270,7 @@ class _BeaconState extends State<Beacon> with WidgetsBindingObserver {
             IconButton(
               onPressed: () {
                 logoutBtn();
+
               },
               icon: const Icon(
                 Icons.logout_rounded,
@@ -276,7 +282,19 @@ class _BeaconState extends State<Beacon> with WidgetsBindingObserver {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             mainAxisAlignment: MainAxisAlignment.center,
-            children: <Widget>[
+            children: <Widget>[              
+           Container(
+            child: const Text("근태 확인", style: TextStyle(
+            fontSize: 20,
+            fontWeight: FontWeight.w700,
+            color: Colors.blue,) ,),
+            margin: const EdgeInsets.all(8.0),
+          ),
+          const SizedBox(
+            height: 20.0,
+            ),
+              //Expanded(child: _buildResultsList()), // 기존 리스트 출력
+              Expanded(child: comuteItem()), // 변경 ui 출력 테스트
               TimerBuilder.periodic(
                 const Duration(seconds: 1),
                 builder: (context) {
@@ -328,13 +346,44 @@ class _BeaconState extends State<Beacon> with WidgetsBindingObserver {
                         MaterialPageRoute(
                             builder: (context) => webview2(data1!, data2!)));
                   },
-                  child: Text('웹 뷰 ', style: TextStyle(fontSize: 20)),
+                  child: Text('그룹웨어 ', style: TextStyle(fontSize: 20)),
                 ),
               ),
-              SizedBox(
-                height: 20.0,
+                            Padding(
+                padding: const EdgeInsets.all(2.0),
+                child: ElevatedButton(
+                  onPressed: () async {
+                    logoutBtn();
+                  },
+                  child: Text('로그아웃 ', style: TextStyle(fontSize: 20)),
+                ),
               ),
-              Expanded(child: _buildResultsList())
+                            Padding(
+                padding: const EdgeInsets.all(2.0),
+                child: ElevatedButton(
+                  onPressed: () async {
+                    Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                            builder: (context) => webview2(data1!, data2!)));
+                  },
+                  child: Text('시작 ', style: TextStyle(fontSize: 20)),
+                ),
+              ),
+                                          Padding(
+                padding: const EdgeInsets.all(2.0),
+                child: ElevatedButton(
+                  onPressed: () async {
+                    Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                            builder: (context) => MyApp()));
+                  },
+                  child: Text('중지 ', style: TextStyle(fontSize: 20)),
+                ),
+              ),
+
+              
             ],
           ),
         ),
@@ -461,7 +510,7 @@ class _BeaconState extends State<Beacon> with WidgetsBindingObserver {
           color: Colors.black,
         ),
         itemBuilder: (context, index) {
-          formattedDate = DateFormat('yyyy-MM-dd – kk:mm:ss').format(now);
+          String formattedDate = DateFormat('yyyy-MM-dd – kk:mm:ss').format(DateTime.now());
           final item = ListTile(
               title: Text(
                 "시 간: $formattedDate\n${_results[index]}",
@@ -478,4 +527,46 @@ class _BeaconState extends State<Beacon> with WidgetsBindingObserver {
       ),
     );
   }
+
+  Widget comuteItem() {
+    return Scaffold(
+      body: Column(
+      crossAxisAlignment:  CrossAxisAlignment.start,
+
+        children: <Widget>[
+                    Container(
+            child: Text("이름 : $name", style: const TextStyle(
+              fontSize: 20,
+              fontWeight: FontWeight.w700,
+              color: Colors.blue,) ,),
+            margin: const EdgeInsets.all(8.0),
+          ),
+          Container(
+            child: Text("유저아이디 : $userId", style: const TextStyle(
+              fontSize: 20,
+              fontWeight: FontWeight.w700,
+              color: Colors.blue,) ,),
+            margin: const EdgeInsets.all(8.0),
+          ),
+          Container(
+            child: Text("디바이스 아이피 : $deviceip", style: const TextStyle(
+              fontSize: 20,
+              fontWeight: FontWeight.w700,
+              color: Colors.blue,) ,),
+            margin: const EdgeInsets.all(8.0),
+          ),
+          Container(
+            child: Text("접속시간 : $alert", style: const TextStyle(
+              fontSize: 20,
+              fontWeight: FontWeight.w700,
+              color: Colors.blue,) ,),
+            margin: const EdgeInsets.all(8.0),
+          )
+      ]),
+
+    );
+  }
+
+
 }
+
