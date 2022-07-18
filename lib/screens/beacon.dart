@@ -22,7 +22,6 @@ import '../service/attendService.dart';
 import '../utils/permission.dart';
 import 'login.dart';
 import 'webview2.dart';
-import 'back.dart';
 
 //현재시간
 import 'package:date_format/date_format.dart';
@@ -377,7 +376,7 @@ class _BeaconState extends State<Beacon> with WidgetsBindingObserver {
                     Navigator.push(
                         context,
                         MaterialPageRoute(
-                            builder: (context) => MyApp()));
+                            builder: (context) => webview2(data1!, data2!)));
                   },
                   child: Text('중지 ', style: TextStyle(fontSize: 20)),
                 ),
